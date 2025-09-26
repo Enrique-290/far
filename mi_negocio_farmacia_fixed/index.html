@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Negocio Farmacia</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com" defer></script>
+
+  <!-- Fuentes e iconos -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+  <!-- Libs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body class="bg-gray-100 flex flex-col md:flex-row min-h-screen">
+  <noscript>
+    <div class="p-3 bg-red-100 text-red-700">Activa JavaScript para usar la app.</div>
+  </noscript>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar bg-indigo-700 text-white flex-shrink-0 p-4 md:static fixed inset-y-0 left-0 z-50 transform -translate-x-full md:translate-x-0">
+    <div class="flex items-center justify-between mb-8">
+      <div class="flex items-center space-x-2">
+        <img id="logoDisplay" src="https://placehold.co/40x40/ffffff/000000?text=Logo" alt="Logo" class="w-10 h-10 rounded-full" />
+        <h1 id="businessNameDisplay" class="text-xl font-bold whitespace-nowrap overflow-hidden">Farmacia</h1>
+      </div>
+      <button id="toggleSidebar" class="p-2 rounded-lg hover:bg-indigo-600 hidden md:block">
+        <i class="fas fa-bars text-xl"></i>
+      </button>
+      <button id="closeSidebar" class="p-2 rounded-lg md:hidden">
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+    <nav class="space-y-2">
+      <button data-section="sales" class="menu-item w-full flex items-center space-x-4 p-3 rounded-lg text-left">
+        <i class="fas fa-cash-register w-6 text-center"></i><span>Ventas</span>
+      </button>
+      <button data-section="inventory" class="menu-item w-full flex items-center space-x-4 p-3 rounded-lg text-left">
+        <i class="fas fa-boxes w-6 text-center"></i><span>Inventario</span>
+      </button>
+      <button data-section="sales-history" class="menu-item w-full flex items-center space-x-4 p-3 rounded-lg text-left">
+        <i class="fas fa-history w-6 text-center"></i><span>Historial de Ventas</span>
+      </button>
+      <button data-section="reports" class="menu-item w-full flex items-center space-x-4 p-3 rounded-lg text-left">
+        <i class="fas fa-chart-line w-6 text-center"></i><span>Reportes</span>
+      </button>
+      <button data-section="clients" class="menu-item w-full flex items-center space-x-4 p-3 rounded-lg text-left">
+        <i class="fas fa-users w-6 text-center"></i><span>Clientes</span>
+      </button>
+      <button data-section="employees" class="menu-item w-full flex items-center space-x-4 p-3 rounded-lg text-left">
+        <i class="fas fa-user-tie w-6 text-center"></i><span>Empleados</span>
+      </button>
+      <button data-section="suppliers" class="menu-item w-full flex items-center space-x-4 p-3 rounded-lg text-left">
+        <i class="fas fa-truck-moving w-6 text-center"></i><span>Proveedores</span>
+      </button>
+      <button data-section="settings" class="menu-item w-full flex items-center space-x-4 p-3 rounded-lg text-left">
+        <i class="fas fa-cog w-6 text-center"></i><span>Configuración</span>
+      </button>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <div id="mainContent" class="main-content flex-grow p-4 md:p-8">
+    <button id="openSidebar" class="md:hidden fixed top-4 left-4 z-40 p-2 rounded-lg bg-indigo-600 text-white shadow-lg">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Ventas -->
+    <div id="sales" class="app-section">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-3xl font-bold text-gray-800">Ventas</h2>
+        <div class="flex items-center space-x-2 text-sm text-gray-500">
+          <span id="currentDate"></span><span id="currentTime"></span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Inventario para Venta -->
+        <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md border border-gray-200">
+          <div class="flex items-center space-x-2 mb-4">
+            <i class="fas fa-search text-gray-400"></i>
+            <input id="salesInventorySearch" placeholder="Buscar producto..." class="pl-2 p-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div id="salesInventoryList" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-96 overflow-y-auto"></div>
+          <div id="salesInventoryEmpty" class="text-center text-gray-500 italic mt-8 hidden">No hay productos que coincidan con la búsqueda.</div>
+        </div>
+
+        <!-- Carrito -->
+        <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md border border-gray-200">
+          <h3 class="text-2xl font-semibold mb-4 text-gray-700">Carrito</h3>
+          <div id="cartList" class="space-y-4 mb-4"></div>
+          <div id="cartEmptyMessage" class="text-center text-gray-500 italic">El carrito está vacío.</div>
+
+          <div class="space-y-2 mt-4">
+            <div class="flex justify-between items-center text-gray-700">
+              <span>Subtotal:</span><span id="cartSubtotal">$0.00</span>
+            </div>
+            <div class="flex justify-between items-center text-gray-700">
+              <span>Impuesto:</span>
+              <span><input type="number" id="taxInput" value="0" min="0" class="w-16 text-right border rounded px-1"> %</span>
+              <span id="taxValue">$0.00</span>
+            </div>
+            <div class="flex justify-between items-center text-gray-700">
+              <span>Descuento:</span>
+              <span><input type="number" id="discountInput" value="0" min="0" class="w-16 text-right border rounded px-1"> %</span>
+              <span id="discountValue">$0.00</span>
+            </div>
+          </div>
+
+          <div class="border-t pt-4 flex justify-between items-center mt-4">
+            <span class="text-xl font-bold text-gray-800">Total: <span id="cartTotal" class="text-green-600">$0.00</span></span>
+            <button id="checkoutBtn" class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 shadow-md disabled:bg-gray-400" disabled>Finalizar Venta</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inventario -->
+    <div id="inventory" class="app-section hidden">
+      <h2 class="text-3xl font-bold text-gray-800 mb-6">Inventario</h2>
+      <div class="flex flex-col md:flex-row justify-between items-center mb-6 space-y-4 md:space-y-0 md:space-x-4">
+        <div class="relative w-full md:w-auto flex-grow">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          <input id="inventorySearch" placeholder="Buscar producto..." class="pl-10 p-3 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="text-sm text-gray-600">Mostrar:</span>
+          <select id="stockFilter" class="p-3 border border-gray-300 rounded-lg">
+            <option value="all">Todo</option>
+            <option value="low">Poco Stock</option>
+          </select>
+        </div>
+        <div class="flex space-x-2">
+          <button id="exportInventoryBtn" class="btn-primary text-white font-semibold py-3 px-6 rounded-lg shadow-md">
+            <i class="fas fa-file-export mr-2"></i>Exportar
+          </button>
+          <button id="addProductBtn" class="btn-primary text-white font-semibold py-3 px-6 rounded-lg shadow-md">
+            <i class="fas fa-plus mr-2"></i>Añadir Producto
+          </button>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+        <div id="inventoryList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <div id="inventoryEmptyMessage" class="text-center text-gray-500 italic mt-8 hidden">No hay productos en el inventario.</div>
+      </div>
+    </div>
+
+    <!-- Historial -->
+    <div id="sales-history" class="app-section hidden">
+      <h2 class="text-3xl font-bold text-gray-800 mb-6">Historial de Ventas</h2>
+      <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+        <div id="salesHistoryList" class="space-y-4"></div>
+        <div id="salesHistoryEmptyMessage" class="text-center text-gray-500 italic mt-8 hidden">No hay ventas registradas.</div>
+      </div>
+    </div>
+
+    <!-- Reportes -->
+    <div id="reports" class="app-section hidden">
+      <h2 class="text-3xl font-bold text-gray-800 mb-6">Reportes</h2>
+      <div class="flex flex-col md:flex-row justify-between items-center mb-6 space-y-4 md:space-y-0 md:space-x-4">
+        <div class="flex space-x-4">
+          <div class="flex items-center space-x-2">
+            <label for="reportStartDate" class="text-sm text-gray-600">Desde:</label>
+            <input type="date" id="reportStartDate" class="p-2 border rounded-lg" />
+          </div>
+          <div class="flex items-center space-x-2">
+            <label for="reportEndDate" class="text-sm text-gray-600">Hasta:</label>
+            <input type="date" id="reportEndDate" class="p-2 border rounded-lg" />
+          </div>
+        </div>
+        <div class="flex space-x-2">
+          <button id="exportCsvBtn" class="btn-primary text-white font-semibold py-3 px-6 rounded-lg shadow-md">
+            <i class="fas fa-file-csv mr-2"></i>Exportar CSV
+          </button>
+          <button id="exportPdfBtn" class="btn-primary text-white font-semibold py-3 px-6 rounded-lg shadow-md">
+            <i class="fas fa-file-pdf mr-2"></i>Exportar PDF
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 text-center">
+          <p class="text-sm text-gray-500">Ventas Totales</p>
+          <p id="totalSalesCount" class="text-3xl font-bold text-indigo-600 mt-1">0</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 text-center">
+          <p class="text-sm text-gray-500">Ganancias Netas</p>
+          <p id="netProfit" class="text-3xl font-bold text-green-600 mt-1">$0.00</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 text-center">
+          <p class="text-sm text-gray-500">Productos Vendidos</p>
+          <p id="productsSoldCount" class="text-3xl font-bold text-gray-800 mt-1">0</p>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+        <h3 class="text-2xl font-semibold mb-4 text-gray-700">Ingresos (Últimos 30 días)</h3>
+        <canvas id="salesChart" height="120"></canvas>
+      </div>
+    </div>
+
+    <!-- Clientes -->
+    <div id="clients" class="app-section hidden">
+      <h2 class="text-3xl font-bold text-gray-800 mb-6">Gestión de Clientes</h2>
+      <div class="flex justify-end mb-6">
+        <button id="exportClientsBtn" class="btn-primary text-white font-semibold py-3 px-6 rounded-lg shadow-md">
+          <i class="fas fa-file-export mr-2"></i>Exportar Datos
+        </button>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+        <div class="mb-6">
+          <h3 class="text-2xl font-semibold mb-4 text-gray-700">Añadir Nuevo Cliente</h3>
+          <form id="addClientForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input id="clientName" placeholder="Nombre del Cliente" required class="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <input id="clientPhone" placeholder="Teléfono" required class="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="col-span-1 md:col-span-2">
+              <button type="submit" class="w-full btn-primary text-white font-semibold py-3 rounded-lg shadow-md">Guardar Cliente</button>
+            </div>
+          </form>
+        </div>
+        <div class="border-t pt-6 mt-6">
+          <h3 class="text-2xl font-semibold mb-4 text-gray-700">Lista de Clientes</h3>
+          <div id="clientsList" class="space-y-4"></div>
+        </div>
+        <div id="clientsEmptyMessage" class="text-center text-gray-500 italic mt-8 hidden">No hay clientes registrados.</div>
+      </div>
+    </div>
+
+    <!-- Empleados -->
+    <div id="employees" class="app-section hidden">
+      <h2 class="text-3xl font-bold text-gray-800 mb-6">Gestión de Empleados</h2>
+      <div class="flex justify-end mb-6">
+        <button id="exportEmployeesBtn" class="btn-primary text-white font-semibold py-3 px-6 rounded-lg shadow-md">
+          <i class="fas fa-file-export mr-2"></i>Exportar Datos
+        </button>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+        <div class="mb-6">
+          <h3 class="text-2xl font-semibold mb-4 text-gray-700">Añadir Nuevo Empleado</h3>
+          <form id="addEmployeeForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input id="employeeName" placeholder="Nombre del Empleado" required class="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <input id="employeeRole" placeholder="Rol (Ej: Cajero)" required class="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <input id="employeeSchedule" placeholder="Turno (Ej: Mañana)" class="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <input id="employeePhone" placeholder="Teléfono" required class="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="col-span-1 md:col-span-2">
+              <button type="submit" class="w-full btn-primary text-white font-semibold py-3 rounded-lg shadow-md">Guardar Empleado</button>
+            </div>
+          </form>
+        </div>
+        <div class="border-t pt-6 mt-6">
+          <h3 class="text-2xl font-semibold mb-4 text-gray-700">Lista de Empleados</h3>
+          <div id="employeesList" class="space-y-4"></div>
+        </div>
+        <div id="employeesEmptyMessage" class="text-center text-gray-500 italic mt-8 hidden">No hay empleados registrados.</div>
+      </div>
+    </div>
+
+    <!-- Proveedores -->
+    <div id="suppliers" class="app-section hidden">
+      <h2 class="text-3xl font-bold text-gray-800 mb-6">Proveedores</h2>
+      <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+        <form id="addSupplierForm" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <input id="supplierName" placeholder="Nombre / Razón social" class="p-3 border rounded-lg">
+          <input id="supplierContact" placeholder="Contacto" class="p-3 border rounded-lg">
+          <input id="supplierPhone" placeholder="Teléfono" class="p-3 border rounded-lg">
+          <div class="col-span-1 md:col-span-3">
+            <button type="submit" class="btn-primary text-white font-semibold py-3 px-6 rounded-lg shadow-md">Guardar Proveedor</button>
+          </div>
+        </form>
+        <div id="suppliersList" class="space-y-3"></div>
+        <div id="suppliersEmptyMessage" class="text-center text-gray-500 italic mt-8 hidden">Sin proveedores.</div>
+      </div>
+    </div>
+
+    <!-- Configuración -->
+    <div id="settings" class="app-section hidden">
+      <h2 class="text-3xl font-bold text-gray-800 mb-6">Configuración</h2>
+      <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 space-y-4">
+        <div class="grid md:grid-cols-[180px_1fr] gap-3 items-center">
+          <label class="text-sm text-gray-600">Nombre del negocio</label>
+          <input id="businessNameInput" class="p-3 border rounded-lg" placeholder="Ej. Dinamita Farmacia">
+        </div>
+        <div class="grid md:grid-cols-[180px_1fr] gap-3 items-center">
+          <label class="text-sm text-gray-600">URL del logo</label>
+          <input id="logoUrlInput" class="p-3 border rounded-lg" placeholder="https://...">
+        </div>
+        <div class="grid md:grid-cols-[180px_1fr] gap-3 items-center">
+          <label class="text-sm text-gray-600">Impuesto (%) por defecto</label>
+          <input id="defaultTaxInput" type="number" min="0" value="0" class="p-3 border rounded-lg">
+        </div>
+        <button id="saveSettingsBtn" class="btn-primary text-white font-semibold py-3 px-6 rounded-lg shadow-md">Guardar</button>
+      </div>
+    </div>
+
+    <!-- LOGS -->
+    <div class="mt-6">
+      <h3 class="font-semibold text-gray-700 mb-2">Logs</h3>
+      <pre id="logs" class="text-xs bg-neutral-50 border rounded p-3 overflow-auto max-h-60"></pre>
+    </div>
+  </div>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
